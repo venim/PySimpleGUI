@@ -2368,6 +2368,12 @@ class Window:
     def Enable(self):
         self.TKroot.grab_release()
 
+    def Hide(self):
+        self.TKroot.withdraw()
+
+    def UnHide(self):
+        self.TKroot.deiconify()
+
 
     def __enter__(self):
         return self
@@ -3261,13 +3267,14 @@ def PackFormIntoFrame(form, containing_frame, toplevel_form):
                 element.TKMenu = tk.Menu(toplevel_form.TKroot, tearoff=element.Tearoff)    # create the menubar
                 menubar = element.TKMenu
                 for menu_entry in menu_def:
-                    # print(f'Adding a Menubar ENTRY')
+                    # print(f'Adding a Menubar ENTRY {menu_entry}')
                     baritem = tk.Menu(menubar, tearoff=element.Tearoff)
                     pos = menu_entry[0].find('&')
+                    # print(pos)
                     if pos != -1:
                         if pos == 0 or menu_entry[0][pos-1] != "\\":
                             menu_entry[0] = menu_entry[0][:pos] + menu_entry[0][pos+1:]
-                    menubar.add_cascade(label=menu_entry[0], menu=baritem, underline = pos)                        
+                    menubar.add_cascade(label=menu_entry[0], menu=baritem, underline = pos)
                     if len(menu_entry) > 1:
                         AddMenuItem(baritem, menu_entry[1], element)
                 toplevel_form.TKroot.configure(menu=element.TKMenu)
@@ -3888,35 +3895,35 @@ def ScrolledTextBox(*args, button_color=None, yes_no=False, auto_close=False, au
     if not args: return
     width, height = size
     width = width if width else MESSAGE_BOX_LINE_WIDTH
-    with Window(args[0], auto_size_text=True, button_color=button_color, auto_close=auto_close, auto_close_duration=auto_close_duration) as form:
-        max_line_total, max_line_width, total_lines, height_computed = 0,0,0,0
-        complete_output = ''
-        for message in args:
-            # fancy code to check if string and convert if not is not need. Just always convert to string :-)
-            # if not isinstance(message, str): message = str(message)
-            message = str(message)
-            longest_line_len = max([len(l) for l in message.split('\n')])
-            width_used = min(longest_line_len, width)
-            max_line_total = max(max_line_total, width_used)
-            max_line_width = width
-            lines_needed = _GetNumLinesNeeded(message, width_used)
-            height_computed += lines_needed
-            complete_output += message + '\n'
-            total_lines += lines_needed
-        height_computed = MAX_SCROLLED_TEXT_BOX_HEIGHT if height_computed > MAX_SCROLLED_TEXT_BOX_HEIGHT else height_computed
-        if height:
-            height_computed = height
-        form.AddRow(Multiline(complete_output, size=(max_line_width, height_computed)))
-        pad = max_line_total-15 if max_line_total > 15 else 1
-        # show either an OK or Yes/No depending on paramater
-        if yes_no:
-            form.AddRow(Text('', size=(pad, 1), auto_size_text=False), Yes(), No())
-            button, values = form.Read()
-            return button
-        else:
-            form.AddRow(Text('', size=(pad, 1), auto_size_text=False), SimpleButton('OK', size=(5, 1), button_color=button_color))
+    form = Window(args[0], auto_size_text=True, button_color=button_color, auto_close=auto_close, auto_close_duration=auto_close_duration)
+    max_line_total, max_line_width, total_lines, height_computed = 0,0,0,0
+    complete_output = ''
+    for message in args:
+        # fancy code to check if string and convert if not is not need. Just always convert to string :-)
+        # if not isinstance(message, str): message = str(message)
+        message = str(message)
+        longest_line_len = max([len(l) for l in message.split('\n')])
+        width_used = min(longest_line_len, width)
+        max_line_total = max(max_line_total, width_used)
+        max_line_width = width
+        lines_needed = _GetNumLinesNeeded(message, width_used)
+        height_computed += lines_needed
+        complete_output += message + '\n'
+        total_lines += lines_needed
+    height_computed = MAX_SCROLLED_TEXT_BOX_HEIGHT if height_computed > MAX_SCROLLED_TEXT_BOX_HEIGHT else height_computed
+    if height:
+        height_computed = height
+    form.AddRow(Multiline(complete_output, size=(max_line_width, height_computed)))
+    pad = max_line_total-15 if max_line_total > 15 else 1
+    # show either an OK or Yes/No depending on paramater
+    if yes_no:
+        form.AddRow(Text('', size=(pad, 1), auto_size_text=False), Yes(), No())
         button, values = form.Read()
         return button
+    else:
+        form.AddRow(Text('', size=(pad, 1), auto_size_text=False), Button('OK', size=(5, 1), button_color=button_color))
+    button, values = form.Read()
+    return button
 
 
 PopupScrolled = ScrolledTextBox
@@ -3961,18 +3968,20 @@ def PopupGetFolder(message, default_path='', no_window=False, size=(None,None), 
         root.destroy()
         return folder_name
 
-    with Window(title=message, icon=icon, auto_size_text=True, button_color=button_color, background_color=background_color,
-                  font=font, no_titlebar=no_titlebar, grab_anywhere=grab_anywhere, keep_on_top=keep_on_top, location=location) as form:
-        layout = [[Text(message, auto_size_text=True, text_color=text_color, background_color=background_color)],
-                  [InputText(default_text=default_path, size=size), FolderBrowse()],
-                  [Ok(), Cancel()]]
+    layout = [[Text(message, auto_size_text=True, text_color=text_color, background_color=background_color)],
+              [InputText(default_text=default_path, size=size), FolderBrowse()],
+              [Ok(), Cancel()]]
 
-        (button, input_values) = form.LayoutAndRead(layout)
-        if button != 'Ok':
-            return None
-        else:
-            path = input_values[0]
-            return path
+    window = Window(title=message, icon=icon, auto_size_text=True, button_color=button_color, background_color=background_color,
+                  font=font, no_titlebar=no_titlebar, grab_anywhere=grab_anywhere, keep_on_top=keep_on_top, location=location)
+
+    (button, input_values) = window.LayoutAndRead(layout)
+
+    if button != 'Ok':
+        return None
+    else:
+        path = input_values[0]
+        return path
 
 #####################################
 # PopupGetFile                      #
@@ -4013,18 +4022,19 @@ def PopupGetFile(message, default_path='', default_extension='', save_as=False, 
 
     browse_button =  SaveAs(file_types=file_types) if save_as else FileBrowse(file_types=file_types)
 
-    with Window(title=message, icon=icon, auto_size_text=True, button_color=button_color, font=font, background_color=background_color,
-                  no_titlebar=no_titlebar, grab_anywhere=grab_anywhere, keep_on_top=keep_on_top, location=location) as form:
-        layout = [[Text(message, auto_size_text=True, text_color=text_color, background_color=background_color)],
-                  [InputText(default_text=default_path, size=size), browse_button],
-                  [Ok(), Cancel()]]
+    layout = [[Text(message, auto_size_text=True, text_color=text_color, background_color=background_color)],
+              [InputText(default_text=default_path, size=size), browse_button],
+              [Ok(), Cancel()]]
 
-        (button, input_values) = form.LayoutAndRead(layout)
-        if button != 'Ok':
-            return None
-        else:
-            path = input_values[0]
-            return path
+    window = Window(title=message, icon=icon, auto_size_text=True, button_color=button_color, font=font, background_color=background_color,
+                  no_titlebar=no_titlebar, grab_anywhere=grab_anywhere, keep_on_top=keep_on_top, location=location)
+
+    (button, input_values) = window.Layout(layout).Read()
+    if button != 'Ok':
+        return None
+    else:
+        path = input_values[0]
+        return path
 
 #####################################
 # PopupGetText                      #
@@ -4047,17 +4057,20 @@ def PopupGetText(message, default_text='', password_char='', size=(None,None), b
     :param location:
     :return: Text entered or None if window was closed
     """
-    with Window(title=message, icon=icon, auto_size_text=True, button_color=button_color, no_titlebar=no_titlebar,
-                  background_color=background_color, grab_anywhere=grab_anywhere, keep_on_top=keep_on_top, location=location) as form:
-        layout = [[Text(message, auto_size_text=True, text_color=text_color, background_color=background_color, font=font)],
-                  [InputText(default_text=default_text, size=size, password_char=password_char)],
-                  [Ok(), Cancel()]]
 
-        (button, input_values) = form.LayoutAndRead(layout)
-        if button != 'Ok':
-            return None
-        else:
-            return input_values[0]
+    layout = [[Text(message, auto_size_text=True, text_color=text_color, background_color=background_color, font=font)],
+              [InputText(default_text=default_text, size=size, password_char=password_char)],
+              [Ok(), Cancel()]]
+
+    window = Window(title=message, icon=icon, auto_size_text=True, button_color=button_color, no_titlebar=no_titlebar,
+                  background_color=background_color, grab_anywhere=grab_anywhere, keep_on_top=keep_on_top, location=location)
+
+    (button, input_values) = window.Layout(layout).Read()
+
+    if button != 'Ok':
+        return None
+    else:
+        return input_values[0]
 
 
 # ============================== SetGlobalIcon ======#
@@ -4403,50 +4416,50 @@ def Popup(*args, button_color=None, background_color=None, text_color=None, butt
     else:
         local_line_width = MESSAGE_BOX_LINE_WIDTH
     title = args_to_print[0] if args_to_print[0] is not None else 'None'
-    with Window(title, auto_size_text=True, background_color=background_color, button_color=button_color, auto_close=auto_close, auto_close_duration=auto_close_duration, icon=icon, font=font, no_titlebar=no_titlebar, grab_anywhere=grab_anywhere, keep_on_top=keep_on_top, location=location) as form:
-        max_line_total, total_lines = 0,0
-        for message in args_to_print:
-            # fancy code to check if string and convert if not is not need. Just always convert to string :-)
-            # if not isinstance(message, str): message = str(message)
-            message = str(message)
-            if message.count('\n'):
-                message_wrapped = message
-            else:
-                message_wrapped = textwrap.fill(message, local_line_width)
-            message_wrapped_lines = message_wrapped.count('\n')+1
-            longest_line_len = max([len(l) for l in message.split('\n')])
-            width_used = min(longest_line_len, local_line_width)
-            max_line_total = max(max_line_total, width_used)
-            # height = _GetNumLinesNeeded(message, width_used)
-            height = message_wrapped_lines
-            form.AddRow(Text(message_wrapped, auto_size_text=True, text_color=text_color, background_color=background_color))
-            total_lines += height
+    form = Window(title, auto_size_text=True, background_color=background_color, button_color=button_color, auto_close=auto_close, auto_close_duration=auto_close_duration, icon=icon, font=font, no_titlebar=no_titlebar, grab_anywhere=grab_anywhere, keep_on_top=keep_on_top, location=location)
+    max_line_total, total_lines = 0,0
+    for message in args_to_print:
+        # fancy code to check if string and convert if not is not need. Just always convert to string :-)
+        # if not isinstance(message, str): message = str(message)
+        message = str(message)
+        if message.count('\n'):
+            message_wrapped = message
+        else:
+            message_wrapped = textwrap.fill(message, local_line_width)
+        message_wrapped_lines = message_wrapped.count('\n')+1
+        longest_line_len = max([len(l) for l in message.split('\n')])
+        width_used = min(longest_line_len, local_line_width)
+        max_line_total = max(max_line_total, width_used)
+        # height = _GetNumLinesNeeded(message, width_used)
+        height = message_wrapped_lines
+        form.AddRow(Text(message_wrapped, auto_size_text=True, text_color=text_color, background_color=background_color))
+        total_lines += height
 
-        pad = max_line_total-15 if max_line_total > 15 else 1
-        pad =1
-        if non_blocking:
-            PopupButton = DummyButton
-        else:
-            PopupButton = SimpleButton
-        # show either an OK or Yes/No depending on paramater
-        if button_type is POPUP_BUTTONS_YES_NO:
-            form.AddRow(Text('', size=(pad, 1), auto_size_text=False,  text_color=text_color, background_color=background_color), PopupButton('Yes', button_color=button_color, focus=True, bind_return_key=True), PopupButton('No', button_color=button_color))
-        elif button_type is POPUP_BUTTONS_CANCELLED:
-            form.AddRow(Text('', size=(pad, 1), auto_size_text=False, text_color=text_color, background_color=background_color), PopupButton('Cancelled', button_color=button_color, focus=True, bind_return_key=True))
-        elif button_type is POPUP_BUTTONS_ERROR:
-            form.AddRow(Text('', size=(pad, 1), auto_size_text=False, text_color=text_color, background_color=background_color), PopupButton('Error', size=(6, 1), button_color=button_color, focus=True, bind_return_key=True))
-        elif button_type is POPUP_BUTTONS_OK_CANCEL:
-            form.AddRow(Text('', size=(pad, 1), auto_size_text=False, text_color=text_color,  background_color=background_color), PopupButton('OK', size=(5, 1), button_color=button_color, focus=True, bind_return_key=True),
-                        PopupButton('Cancel', size=(5, 1), button_color=button_color))
-        elif button_type is POPUP_BUTTONS_NO_BUTTONS:
-            pass
-        else:
-            form.AddRow(Text('', size=(pad, 1), auto_size_text=False, background_color=background_color), PopupButton('OK', size=(5, 1), button_color=button_color, focus=True, bind_return_key=True))
+    pad = max_line_total-15 if max_line_total > 15 else 1
+    pad =1
+    if non_blocking:
+        PopupButton = DummyButton
+    else:
+        PopupButton = SimpleButton
+    # show either an OK or Yes/No depending on paramater
+    if button_type is POPUP_BUTTONS_YES_NO:
+        form.AddRow(Text('', size=(pad, 1), auto_size_text=False,  text_color=text_color, background_color=background_color), PopupButton('Yes', button_color=button_color, focus=True, bind_return_key=True), PopupButton('No', button_color=button_color))
+    elif button_type is POPUP_BUTTONS_CANCELLED:
+        form.AddRow(Text('', size=(pad, 1), auto_size_text=False, text_color=text_color, background_color=background_color), PopupButton('Cancelled', button_color=button_color, focus=True, bind_return_key=True))
+    elif button_type is POPUP_BUTTONS_ERROR:
+        form.AddRow(Text('', size=(pad, 1), auto_size_text=False, text_color=text_color, background_color=background_color), PopupButton('Error', size=(6, 1), button_color=button_color, focus=True, bind_return_key=True))
+    elif button_type is POPUP_BUTTONS_OK_CANCEL:
+        form.AddRow(Text('', size=(pad, 1), auto_size_text=False, text_color=text_color,  background_color=background_color), PopupButton('OK', size=(5, 1), button_color=button_color, focus=True, bind_return_key=True),
+                    PopupButton('Cancel', size=(5, 1), button_color=button_color))
+    elif button_type is POPUP_BUTTONS_NO_BUTTONS:
+        pass
+    else:
+        form.AddRow(Text('', size=(pad, 1), auto_size_text=False, background_color=background_color), PopupButton('OK', size=(5, 1), button_color=button_color, focus=True, bind_return_key=True))
 
-        if non_blocking:
-            button, values = form.ReadNonBlocking()
-        else:
-            button, values = form.Show()
+    if non_blocking:
+        button, values = form.ReadNonBlocking()
+    else:
+        button, values = form.Show()
 
     return button
 
