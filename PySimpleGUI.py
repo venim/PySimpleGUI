@@ -3267,7 +3267,7 @@ def PackFormIntoFrame(form, containing_frame, toplevel_form):
                     if pos != -1:
                         if pos == 0 or menu_entry[0][pos-1] != "\\":
                             menu_entry[0] = menu_entry[0][:pos] + menu_entry[0][pos+1:]
-                        menubar.add_cascade(label=menu_entry[0], menu=baritem, underline = pos)                        
+                    menubar.add_cascade(label=menu_entry[0], menu=baritem, underline = pos)                        
                     if len(menu_entry) > 1:
                         AddMenuItem(baritem, menu_entry[1], element)
                 toplevel_form.TKroot.configure(menu=element.TKMenu)
